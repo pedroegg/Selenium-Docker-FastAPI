@@ -1,6 +1,6 @@
-# Cloud Selenium browser exposed through Python + FastAPI
+# Selenium browser running on Docker, exposed through Python + FastAPI
 
-Supporting:
+**Supporting:**
 1. Get URL HTML after page finished loading everything + JS
 2. Passing headers and cookies through JSON payload
 3. Stealth browser
