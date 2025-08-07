@@ -27,7 +27,7 @@ if os.getenv('ENV') == 'development':
 	os.environ['CHROMEDRIVER_PATH'] = chromedriver_path
 
 import logging
-logging.basicConfig(level=int(os.getenv('LOG_LEVEL')), force=True)
+logging.basicConfig(level=int(os.getenv('LOG_LEVEL', '20')), force=True)
 logger = logging.getLogger('API')
 
 import atexit
@@ -44,22 +44,22 @@ from library.errors import BaseError
 from api.routers import browser_router
 
 app = FastAPI(
-	title=os.getenv("API_TITLE"),
-	version=os.getenv("API_VERSION"),
+	title=os.getenv('API_TITLE', 'API'),
+	version=os.getenv('API_VERSION', '1.0.0'),
 )
 
 error_handler = ErrorHandler(logger)
-app.add_exception_handler(BaseError, error_handler.base_error_handler)
-app.add_exception_handler(ValidationError, error_handler.validation_error_handler)
-app.add_exception_handler(RequestValidationError, error_handler.validation_error_handler)
-app.add_exception_handler(Exception, error_handler.generic_error_handler)
+app.add_exception_handler(BaseError, error_handler.base)
+app.add_exception_handler(Exception, error_handler.generic)
+app.add_exception_handler(ValidationError, error_handler.validation)
+app.add_exception_handler(RequestValidationError, error_handler.validation)
 
-origins = os.getenv("CORS_ALLOW_ORIGINS", "*").split(",")
+origins = os.getenv('CORS_ALLOW_ORIGINS', '*').split(',')
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=origins,
 	allow_credentials=True,
-	allow_methods=["GET"],
+	allow_methods=['GET', 'POST'],
 )
 
 proxy_server = ProxyServer()

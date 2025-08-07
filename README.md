@@ -11,12 +11,11 @@ Docker image: https://hub.docker.com/r/pedroegg/cloud-selenium
 ## Usage
 
 1. Run `make run-docker` to run with docker (no other actions needed).
-2. Do POST requests to `http://127.0.0.1:8000/browser/html` passing the `url` (required), `timeout` (optional), `stealth` (optional), `headers` (optional) and `cookies` (optional) data through JSON body.
+2. Do POST requests to `http://127.0.0.1:8000/browser/html?url={YOUR_URL}` passing the `url` querystring (required) and the fields `timeout` (optional), `stealth` (optional), `headers` (optional) and `cookies` (optional) data through JSON body (sending a body is optional).
 
 Example of JSON body:
 ```json
 {
-	"url": "https://www.tiktok.com",
 	"timeout": 15,
 	"stealth": true,
 	"headers": {
@@ -29,7 +28,10 @@ Example of JSON body:
 }
 ```
 
-- `url`: The website you want to access.
+**QueryString fields:**
+- `url` (querystring): The website you want to access.
+
+**JSON Body fields:**
 - `timeout`: Max timeout in seconds for the request to answer (stopping the page loading wait if needed).
 - `stealth`: Use `true` for enabling the stealth mode browser, and `false` (or not passing this field) to disable it.
 - `headers`: The HTTP headers you want to send for the request. Use it for `Authorization`, `User-Agent` and this kind of stuff.
@@ -37,5 +39,5 @@ Example of JSON body:
 
 ## Running locally:
 
-1. Run `make install` to install poetry and all the dependecies needed. Ensure you already have the correct python version needed (currently >= 3.11).
+1. Run `poetry install` to install all the dependecies needed. Ensure you already have the correct python version needed (currently >= 3.11).
 2. Then, run `make run-dev` to run it locally.

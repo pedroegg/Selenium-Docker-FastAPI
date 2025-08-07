@@ -5,11 +5,11 @@ logger = logging.getLogger("Proxy")
 
 import os
 from contextlib import AbstractContextManager
-from typing import Dict, Any
+from typing import Dict, Any, Final
 
 from browsermobproxy import Server, Client
 
-_BROWSERMOB_PATH = os.getenv("BROWSERMOB_PATH")
+_BROWSERMOB_PATH: Final[str | None] = os.getenv("BROWSERMOB_PATH")
 if not _BROWSERMOB_PATH:
 	raise RuntimeError("BROWSERMOB_PATH env var must be set")
 
@@ -20,12 +20,12 @@ __all__ = ["ProxyServer", "ProxyClient", "get_proxy_server"]
 # Singleton instance
 _proxy_server: ProxyServer | None = None
 
-def get_proxy_server() -> ProxyServer:
+def get_proxy_server() -> ProxyServer | None:
 	global _proxy_server
 	return _proxy_server
 
 class ProxyServer:
-	_server: Server
+	_server: Server | None
 
 	def __init__(self) -> None:
 		self._server = Server(_BROWSERMOB_PATH, options={"port": _BROWSERMOB_PORT})
@@ -37,6 +37,9 @@ class ProxyServer:
 		logger.info("BrowserMob Proxy server started.")
 
 	def new_client(self) -> ProxyClient:
+		if not self._server:
+			raise RuntimeError('Proxy server not initialized or closed')
+
 		return ProxyClient(self._server.create_proxy())
 
 	def __exit__(self, exc_type, exc, tb) -> bool:
@@ -47,7 +50,9 @@ class ProxyServer:
 		self.close()
 
 	def close(self) -> None:
-		if getattr(self, "_server", None):
+		global _proxy_server
+
+		if self._server:
 			try:
 				self._server.stop()
 				logger.info("BrowserMob Proxy server stopped.")
@@ -57,18 +62,26 @@ class ProxyServer:
 
 			finally:
 				self._server = None
+				_proxy_server = None
 
 class ProxyClient(AbstractContextManager):
-	_client: Client
+	_client: Client | None
 
 	def __init__(self, client: Client) -> None:
 		self._client = client
 
+	@property
+	def client(self) -> Client:
+		if not self._client:
+			raise RuntimeError('Proxy client not initialized or closed')
+		
+		return self._client
+
 	def get_address(self) -> str:
-		return self._client.proxy
+		return self.client.proxy
 
 	def add_headers(self, headers: Dict[str, Any]) -> None:
-		self._client.headers(headers)
+		self.client.headers(headers)
 
 	def __exit__(self, exc_type, exc, tb) -> bool:
 		self.close()
@@ -78,7 +91,7 @@ class ProxyClient(AbstractContextManager):
 		self.close()
 
 	def close(self) -> None:
-		if getattr(self, "_client", None):
+		if self._client:
 			try:
 				self._client.close()
 
@@ -87,4 +100,3 @@ class ProxyClient(AbstractContextManager):
 
 			finally:
 				self._client = None
-				del self._client

@@ -16,7 +16,7 @@ import os
 import time
 from contextlib import AbstractContextManager
 from abc import abstractmethod
-from typing import List, Dict, Any, Tuple, Callable, Union
+from typing import List, Dict, Any, Tuple, Callable, Union, Final
 
 import undetected_chromedriver as uc
 from selenium import webdriver
@@ -34,8 +34,8 @@ __all__ = ["HeadlessChrome"]
 
 _DEFAULT_TIMEOUT = int(os.getenv("PAGELOAD_TIMEOUT", "15"))
 
-_CHROME_BIN = os.getenv("CHROME_BIN")
-_CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH")
+_CHROME_BIN: Final[str | None] = os.getenv("CHROME_BIN")
+_CHROMEDRIVER_PATH: Final[str | None] = os.getenv("CHROMEDRIVER_PATH")
 
 if not _CHROME_BIN:
 	raise RuntimeError("CHROME_BIN env var must be set")
@@ -50,7 +50,7 @@ class SeleniumBrowser(AbstractContextManager):
 			self,
 			headers: Dict[str, Any] | None = None,
 			cookies: Dict[str, str] | None = None,
-			timeout: int | None = None
+			timeout: float | None = None
 		) -> None:
 
 		self._proxy: ProxyClient | None = None
@@ -58,25 +58,47 @@ class SeleniumBrowser(AbstractContextManager):
 		self._headers = headers
 		self._cookies = cookies
 
-		self.driver: Union[webdriver.Chrome, uc.Chrome] = self._create_driver()
+		self._driver: Union[webdriver.Chrome, uc.Chrome, None] = self._create_driver()
 
 	@abstractmethod
 	def _create_driver(self) -> Union[webdriver.Chrome, uc.Chrome]:
 		"""Create and return a configured Selenium Chrome driver."""
 		pass
+	
+	@property
+	def driver(self) -> WebDriver:
+		if not self._driver:
+			raise RuntimeError('WebDriver not initialized or closed')
+		
+		return self._driver
 
 	def __exit__(self, exc_type, exc, tb):
-		self._quit_driver()
+		self.close()
 		return False
 
 	def __del__(self):
-		self._quit_driver()
+		self.close()
 
 	def close(self):
 		if self._proxy:
-			self._proxy.close()
+			try:
+				self._proxy.close()
+			
+			except Exception as e:
+				logger.error(f'Failed to close proxy connection: {e}')
+			
+			finally:
+				self._proxy = None
+		
+		if self._driver:
+			try:
+				self._driver.quit()
 
-		self._quit_driver()
+			except WebDriverException as exc:
+				logger.error("Error during driver.quit(): %s", exc, exc_info=True)
+
+			finally:
+				self._driver = None
 
 	def get(self, url: str) -> None:
 		"""Navigate to *url* and wait until the document is fully loaded."""
@@ -135,17 +157,6 @@ class SeleniumBrowser(AbstractContextManager):
 			logger.error(f"Error waiting for page to be ready: {e}")
 			raise
 
-	def _quit_driver(self):
-		if getattr(self, "driver", None):
-			try:
-				self.driver.quit()
-
-			except WebDriverException as exc:
-				logger.error("Error during driver.quit(): %s", exc, exc_info=True)
-
-			finally:
-				self.driver = None
-
 class HeadlessChrome(SeleniumBrowser):
 	def _create_driver(self) -> webdriver.Chrome:
 		"""Create and return a configured headless Chrome driver."""
@@ -174,6 +185,8 @@ class HeadlessChrome(SeleniumBrowser):
 			options.add_argument(f'--proxy-server={self._proxy.get_address()}')
 			options.add_argument('--ignore-certificate-errors')
 			options.add_argument('--allow-insecure-localhost')
+			options.add_argument("--proxy-bypass-list=<-loopback>")
+			options.set_capability("acceptInsecureCerts", True)
 
 		options.binary_location = _CHROME_BIN
 		service = Service(executable_path=_CHROMEDRIVER_PATH)
@@ -209,6 +222,8 @@ class StealthChrome(SeleniumBrowser):
 			options.add_argument(f'--proxy-server={self._proxy.get_address()}')
 			options.add_argument('--ignore-certificate-errors')
 			options.add_argument('--allow-insecure-localhost')
+			options.add_argument("--proxy-bypass-list=<-loopback>")
+			options.set_capability("acceptInsecureCerts", True)
 
 		driver = uc.Chrome(
 			headless=True,
@@ -238,8 +253,10 @@ class StealthChrome(SeleniumBrowser):
 			})();
 		"""
 
-		user_agent = self._headers.get("User-Agent", None)
-		accept_language = self._headers.get("Accept-Language", None)
+		user_agent, accept_language = None, None
+		if self._headers:
+			user_agent = self._headers.get("User-Agent", None)
+			accept_language = self._headers.get("Accept-Language", None)
 
 		cdp_override_args = {
 			"userAgent": user_agent or driver.execute_script("return navigator.userAgent"),

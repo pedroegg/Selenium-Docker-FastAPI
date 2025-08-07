@@ -15,8 +15,10 @@ from selenium.common.exceptions import TimeoutException
 from library.selenium_utils import HeadlessChrome, StealthChrome
 from library.errors import InternalError
 
-class BrowserInput(BaseModel):
+class BrowserQuery(BaseModel):
 	url: str = Field(alias='url', description='Target URL')
+
+class BrowserPayload(BaseModel):
 	stealth_mode: bool = Field(default=False, alias='stealth', description='Activate this option to use the Stealth mode browser')
 	timeout: Optional[float] = Field(default=None, alias='timeout', description='Maximum time in seconds to wait for page to load and return')
 	headers: Optional[Dict[str, Any]] = Field(default=None, alias='headers', description='Headers to use')
@@ -44,16 +46,19 @@ def screenshot(url: str = Query(alias='url', description="Target URL")):
 	return StreamingResponse(io.BytesIO(png), media_type="image/png")
 
 @router.post("/html", response_class=HTMLResponse, summary="Return the fully rendered HTML of the page")
-def html(data: Annotated[BrowserInput, Body(default_factory=BrowserInput)]):
+def html(
+	query: Annotated[BrowserQuery, Query()],
+	payload: Annotated[BrowserPayload, Body(default_factory=BrowserPayload)]
+):
 
-	if data.stealth_mode:
-		browser = StealthChrome(data.headers, data.cookies, data.timeout)
+	if payload.stealth_mode:
+		browser = StealthChrome(payload.headers, payload.cookies, payload.timeout)
 	else:
-		browser = HeadlessChrome(data.headers, data.cookies, data.timeout)
+		browser = HeadlessChrome(payload.headers, payload.cookies, payload.timeout)
 
 	try:
 		with browser:
-			browser.get(data.url)
+			browser.get(query.url)
 			html_source = browser.html()
 
 	except TimeoutException:

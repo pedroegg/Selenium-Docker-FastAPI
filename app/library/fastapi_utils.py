@@ -17,15 +17,21 @@ class ErrorHandler:
 	def __init__(self, logger: Logger | None = None) -> None:
 		self._logger = logger
 
-	def base_error_handler(self, _: Request, exc: BaseError) -> JSONResponse:
+	def base(self, req: Request, exc: Exception) -> JSONResponse:
+		if not isinstance(exc, BaseError):
+			return self.generic(req, exc)
+
 		return JSONResponse(status_code=exc.code, content=exc.to_dict())
 
-	def validation_error_handler(self, request: Request, exc: ValidationError | RequestValidationError) -> JSONResponse:
-		detail = exc.errors()
-		return self.base_error_handler(request, BadRequest(detail))
+	def validation(self, req: Request, exc: Exception) -> JSONResponse:
+		if not isinstance(exc, (ValidationError, RequestValidationError)):
+			return self.generic(req, exc)
+		
+		detail = str(exc.errors())
+		return self.base(req, BadRequest(detail))
 
-	def generic_error_handler(self, request: Request, exc: Exception) -> JSONResponse:
+	def generic(self, req: Request, exc: Exception) -> JSONResponse:
 		if self._logger:
-			self._logger.error(exc, exc_info=True)
+			self._logger.error(f'request for "{req.url}" failed with a unexpected error: {exc}', exc_info=True)
 
-		return self.base_error_handler(request, InternalError(str(exc)))
+		return self.base(req, InternalError(str(exc)))

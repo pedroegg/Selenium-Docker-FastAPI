@@ -1,0 +1,75 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Pytest cache
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+
+# Logs and local dev files
+*.log
+*.sqlite3
+*.db
+*.pid
+*.swp
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+MANIFEST
+
+# Wheels
+*.whl
+
+# pip tools
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Bandit security reports
+bandit.json
+
+# PyInstaller
+*.spec
+
+# Profiling
+.prof
+
+# Test outputs
+.tox/
+.nox/
+
+# Editable installs
+*.egg
+
+# Sphinx documentation
+docs/_build/
+
+*.log
