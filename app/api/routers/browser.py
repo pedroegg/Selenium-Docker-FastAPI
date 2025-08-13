@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger("Browser router")
 
 import io
-from typing import Optional, Dict, Any, Annotated
+from typing import Optional, List, Dict, Any, Annotated
 
 from fastapi import APIRouter, Query, Body
 from fastapi.responses import StreamingResponse, HTMLResponse
@@ -22,7 +22,7 @@ class BrowserPayload(BaseModel):
 	stealth_mode: bool = Field(default=False, alias='stealth', description='Activate this option to use the Stealth mode browser')
 	timeout: Optional[float] = Field(default=None, alias='timeout', description='Maximum time in seconds to wait for page to load and return')
 	headers: Optional[Dict[str, Any]] = Field(default=None, alias='headers', description='Headers to use')
-	cookies: Optional[Dict[str, str]] = Field(default=None, alias='cookies', description='Cookies to use')
+	cookies: Optional[List[Dict[str, str]]] = Field(default=None, alias='cookies', description='Cookies to use')
 
 router = APIRouter(prefix="/browser", tags=["browser"])
 

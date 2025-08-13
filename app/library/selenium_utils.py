@@ -49,7 +49,7 @@ class SeleniumBrowser(AbstractContextManager):
 	def __init__(
 			self,
 			headers: Dict[str, Any] | None = None,
-			cookies: Dict[str, str] | None = None,
+			cookies: List[Dict[str, str]] | None = None,
 			timeout: float | None = None
 		) -> None:
 
@@ -104,8 +104,10 @@ class SeleniumBrowser(AbstractContextManager):
 		"""Navigate to *url* and wait until the document is fully loaded."""
 
 		self.driver.get(url)
-		if self._cookies:
-			self.driver.add_cookie(self._cookies)
+		if self._cookies and len(self._cookies) > 0:
+			for cookie in self._cookies:
+				self.driver.add_cookie(cookie)
+			
 			self.driver.get(url)
 
 		self._wait_until_page_ready(self._timeout)
